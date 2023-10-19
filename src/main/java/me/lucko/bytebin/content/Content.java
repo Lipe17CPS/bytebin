@@ -102,6 +102,11 @@ public final class Content {
         this.contentLength = content.length;
     }
 
+    // for ormlite
+    Content() {
+
+    }
+
     public String getKey() {
         return this.key;
     }
