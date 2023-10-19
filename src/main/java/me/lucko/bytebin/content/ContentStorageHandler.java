@@ -30,7 +30,7 @@ import com.google.common.collect.ImmutableMap;
 import me.lucko.bytebin.content.storage.StorageBackend;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
-import org.checkerframework.checker.nullness.qual.NonNull;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
 import java.util.Map;
@@ -72,7 +72,7 @@ public class ContentStorageHandler implements CacheLoader<String, Content> {
      * @return the loaded content
      */
     @Override
-    public @NonNull Content load(String key) {
+    public @NotNull Content load(String key) {
         // query the index to see if content with this key is stored
         Content metadata = this.index.get(key);
         if (metadata == null) {

@@ -31,6 +31,7 @@ import com.google.common.collect.ImmutableMap;
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -170,7 +171,7 @@ public class Configuration {
         final String keySystemProperty;
         final String keyEnvironmentVariable;
 
-        Option(String keyJson, String keySystemProperty) {
+        Option(@NotNull String keyJson, @NotNull String keySystemProperty) {
             this.keyJson = keyJson;
             this.keySystemProperty = keySystemProperty;
             this.keyEnvironmentVariable = keySystemProperty.toUpperCase(Locale.ROOT).replace('.', '_');

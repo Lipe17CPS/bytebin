@@ -25,34 +25,29 @@
 
 package me.lucko.bytebin.util;
 
-import com.google.common.collect.ImmutableSet;
-
 import io.jooby.Context;
 import io.jooby.StatusCode;
 import io.jooby.exception.StatusCodeException;
+import lombok.RequiredArgsConstructor;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.Collection;
-import java.util.Set;
 
 /**
  * Handles rate limit checking for the application.
- *
+ * <p>
  * Trusted server-side applications making requests to bytebin on
  * behalf of other clients can authenticate using an API key and provide
  * the client's IP address using an HTTP header. In this case, the client IP
  * address will be used for rate limiting purposes instead.
  */
+@RequiredArgsConstructor
 public final class RateLimitHandler {
-    private static final String HEADER_FORWARDED_IP = "Bytebin-Forwarded-For";
     private static final String HEADER_API_KEY = "Bytebin-Api-Key";
 
-    private final Set<String> apiKeys;
+    private final Collection<String> apiKeys;
 
-    public RateLimitHandler(Collection<String> apiKeys) {
-        this.apiKeys = ImmutableSet.copyOf(apiKeys);
-    }
-
-    public String getIpAddressAndCheckRateLimit(Context ctx, RateLimiter limiter) {
+    public @NotNull String getIpAddressAndCheckRateLimit(@NotNull Context ctx, @NotNull RateLimiter limiter) {
         // get the connection IP address according to cloudflare, fallback to
         // the remote address
         String ipAddress = ctx.header("x-real-ip").valueOrNull();
@@ -68,7 +63,7 @@ public final class RateLimitHandler {
                 throw new StatusCodeException(StatusCode.UNAUTHORIZED, "API key is invalid");
             }
 
-            ipAddress = ctx.header(HEADER_FORWARDED_IP).value(ipAddress);
+            return ipAddress;
         }
 
         // check rate limits

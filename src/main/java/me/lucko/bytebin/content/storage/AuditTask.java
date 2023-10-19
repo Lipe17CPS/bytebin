@@ -25,22 +25,19 @@
 
 package me.lucko.bytebin.content.storage;
 
+import lombok.RequiredArgsConstructor;
 import me.lucko.bytebin.content.ContentIndexDatabase;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
+@RequiredArgsConstructor
 public class AuditTask implements Runnable {
     private static final Logger LOGGER = LogManager.getLogger(AuditTask.class);
 
     private final ContentIndexDatabase index;
     private final List<StorageBackend> backends;
-
-    public AuditTask(ContentIndexDatabase index, List<StorageBackend> backends) {
-        this.index = index;
-        this.backends = backends;
-    }
 
     @Override
     public void run() {

@@ -39,6 +39,7 @@ import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
+import org.jetbrains.annotations.NotNull;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -73,7 +74,7 @@ public final class Bytebin implements AutoCloseable {
             Bytebin bytebin = new Bytebin(config);
             Runtime.getRuntime().addShutdownHook(new Thread(bytebin::close, "Bytebin Shutdown Thread"));
         } catch (Exception e) {
-            e.printStackTrace();
+            e.printStackTrace(System.err);
         }
     }
 
@@ -85,7 +86,7 @@ public final class Bytebin implements AutoCloseable {
     /** The web server instance */
     private final BytebinServer server;
 
-    public Bytebin(Configuration config) throws Exception {
+    public Bytebin(@NotNull Configuration config) throws Exception {
         // setup simple logger
         LOGGER.info("loading bytebin...");
 
@@ -128,12 +129,10 @@ public final class Bytebin implements AutoCloseable {
                 config.getInt(Option.PORT, 8080),
                 new RateLimitHandler(config.getStringList(Option.API_KEYS)),
                 new RateLimiter(
-                        // by default, allow posts at a rate of 30 times every 10 minutes (every 20s)
                         config.getInt(Option.POST_RATE_LIMIT_PERIOD, 10),
                         config.getInt(Option.POST_RATE_LIMIT, 30)
                 ),
                 new RateLimiter(
-                        // by default, allow reads at a rate of 30 times every 2 minutes (every 4s)
                         config.getInt(Option.READ_RATE_LIMIT_PERIOD, 2),
                         config.getInt(Option.READ_RATE_LIMIT, 30)
                 ),

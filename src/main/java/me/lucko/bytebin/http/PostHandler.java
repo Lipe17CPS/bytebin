@@ -30,18 +30,20 @@ import io.jooby.MediaType;
 import io.jooby.Route;
 import io.jooby.StatusCode;
 import io.jooby.exception.StatusCodeException;
+import lombok.RequiredArgsConstructor;
 import me.lucko.bytebin.content.Content;
 import me.lucko.bytebin.content.ContentLoader;
 import me.lucko.bytebin.content.ContentStorageHandler;
 import me.lucko.bytebin.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
 import java.util.Date;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+@RequiredArgsConstructor
 public final class PostHandler implements Route.Handler {
 
     /** Logger instance */
@@ -53,24 +55,12 @@ public final class PostHandler implements Route.Handler {
     private final ContentStorageHandler storageHandler;
     private final ContentLoader contentLoader;
     private final TokenGenerator contentTokenGenerator;
-    private final TokenGenerator authKeyTokenGenerator;
+    private final TokenGenerator authKeyTokenGenerator = new TokenGenerator(32);
     private final long maxContentLength;
     private final ExpiryHandler expiryHandler;
 
-    public PostHandler(RateLimiter rateLimiter, RateLimitHandler rateLimitHandler, ContentStorageHandler storageHandler, ContentLoader contentLoader, TokenGenerator contentTokenGenerator, long maxContentLength, ExpiryHandler expiryHandler) {
-        this.rateLimiter = rateLimiter;
-        this.rateLimitHandler = rateLimitHandler;
-        this.storageHandler = storageHandler;
-        this.contentLoader = contentLoader;
-        this.contentTokenGenerator = contentTokenGenerator;
-        this.authKeyTokenGenerator = new TokenGenerator(32);
-        this.maxContentLength = maxContentLength;
-        this.expiryHandler = expiryHandler;
-    }
-
-    @Nonnull
     @Override
-    public String apply(@Nonnull Context ctx) {
+    public @NotNull String apply(@NotNull Context ctx) {
         byte[] content = ctx.body().bytes();
 
         // ensure something was actually posted

@@ -30,19 +30,21 @@ import io.jooby.MediaType;
 import io.jooby.Route;
 import io.jooby.StatusCode;
 import io.jooby.exception.StatusCodeException;
+import lombok.RequiredArgsConstructor;
 import me.lucko.bytebin.content.ContentLoader;
 import me.lucko.bytebin.util.*;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
+import org.jetbrains.annotations.NotNull;
 
-import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 
-public final class GetHandler implements Route.Handler {
+@RequiredArgsConstructor
+public class GetHandler implements Route.Handler {
 
     /** Logger instance */
     private static final Logger LOGGER = LogManager.getLogger(GetHandler.class);
@@ -51,15 +53,8 @@ public final class GetHandler implements Route.Handler {
     private final RateLimitHandler rateLimitHandler;
     private final ContentLoader contentLoader;
 
-    public GetHandler(RateLimiter rateLimiter, RateLimitHandler rateLimitHandler, ContentLoader contentLoader) {
-        this.rateLimiter = rateLimiter;
-        this.rateLimitHandler = rateLimitHandler;
-        this.contentLoader = contentLoader;
-    }
-
-    @Nonnull
     @Override
-    public CompletableFuture<byte[]> apply(@Nonnull Context ctx) {
+    public @NotNull CompletableFuture<byte[]> apply(@NotNull Context ctx) {
         // get the requested path
         String path = ctx.path("id").value();
         if (path.trim().isEmpty() || path.contains(".") || TokenGenerator.INVALID_TOKEN_PATTERN.matcher(path).find()) {
@@ -116,7 +111,7 @@ public final class GetHandler implements Route.Handler {
 
             LOGGER.warn("[REQUEST] Request for 'key = " + path + "' was made with incompatible Accept-Encoding headers! " +
                     "Content-Encoding = " + contentEncodingStrings + ", " +
-                    "Accept-Encoding = " + acceptedEncoding + "");
+                    "Accept-Encoding = " + acceptedEncoding);
 
             // if it's compressed using gzip, we will uncompress on the server side
             if (contentEncodingStrings.size() == 1 && contentEncodingStrings.get(0).equals(ContentEncoding.GZIP)) {
