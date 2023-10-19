@@ -25,48 +25,39 @@
 
 package me.lucko.bytebin.http;
 
-import me.lucko.bytebin.content.ContentLoader;
-import me.lucko.bytebin.util.ContentEncoding;
-import me.lucko.bytebin.util.Gzip;
-import me.lucko.bytebin.util.RateLimitHandler;
-import me.lucko.bytebin.util.RateLimiter;
-import me.lucko.bytebin.util.TokenGenerator;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import io.jooby.Context;
 import io.jooby.MediaType;
 import io.jooby.Route;
 import io.jooby.StatusCode;
 import io.jooby.exception.StatusCodeException;
+import me.lucko.bytebin.content.ContentLoader;
+import me.lucko.bytebin.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.time.Instant;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.stream.Collectors;
-
-import javax.annotation.Nonnull;
 
 public final class GetHandler implements Route.Handler {
 
     /** Logger instance */
     private static final Logger LOGGER = LogManager.getLogger(GetHandler.class);
 
-    private final BytebinServer server;
     private final RateLimiter rateLimiter;
     private final RateLimitHandler rateLimitHandler;
     private final ContentLoader contentLoader;
 
-    public GetHandler(BytebinServer server, RateLimiter rateLimiter, RateLimitHandler rateLimitHandler, ContentLoader contentLoader) {
-        this.server = server;
+    public GetHandler(RateLimiter rateLimiter, RateLimitHandler rateLimitHandler, ContentLoader contentLoader) {
         this.rateLimiter = rateLimiter;
         this.rateLimitHandler = rateLimitHandler;
         this.contentLoader = contentLoader;
     }
 
+    @Nonnull
     @Override
     public CompletableFuture<byte[]> apply(@Nonnull Context ctx) {
         // get the requested path
@@ -89,9 +80,6 @@ public final class GetHandler implements Route.Handler {
                 "    ip = " + ipAddress + "\n" +
                 (origin == null ? "" : "    origin = " + origin + "\n")
         );
-
-        // metrics
-        BytebinServer.recordRequest("GET", ctx);
 
         // request the file from the cache async
         return this.contentLoader.get(path).handleAsync((content, throwable) -> {

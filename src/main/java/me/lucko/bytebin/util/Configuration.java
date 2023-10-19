@@ -144,21 +144,13 @@ public class Configuration {
     }
 
     public enum Option {
-
         HOST("host", "bytebin.http.host"),
         PORT("port", "bytebin.http.port"),
-        HTTP_HOST_ALIASES("httpHostAliases", "bytebin.http.hostaliases"),
 
-        METRICS("metricsEnabled", "bytebin.metrics.enabled"),
         AUDIT_ON_STARTUP("startupAudit", "bytebin.startup.audit"),
 
         KEY_LENGTH("keyLength", "bytebin.misc.keylength"),
         EXECUTOR_POOL_SIZE("corePoolSize", "bytebin.misc.corepoolsize"),
-
-        S3("s3", "bytebin.storage.s3"),
-        S3_BUCKET("s3Bucket", "bytebin.storage.s3.bucket"),
-        S3_EXPIRY_THRESHOLD("s3ExpiryThreshold", "bytebin.storage.s3.expiry.threshold"), // minutes
-        S3_SIZE_THRESHOLD("s3SizeThreshold", "bytebin.storage.s3.size.threshold"), // kb
 
         MAX_CONTENT_LENGTH("maxContentLengthMb", "bytebin.content.maxsize"), // mb
         MAX_CONTENT_LIFETIME("lifetimeMinutes", "bytebin.content.expiry"), // minutes
@@ -171,8 +163,6 @@ public class Configuration {
 
         POST_RATE_LIMIT_PERIOD("postRateLimitPeriodMins", "bytebin.ratelimit.post.period"), // minutes
         POST_RATE_LIMIT("postRateLimit", "bytebin.ratelimit.post.amount"),
-        UPDATE_RATE_LIMIT_PERIOD("updateRateLimitPeriodMins", "bytebin.ratelimit.update.period"), // minutes
-        UPDATE_RATE_LIMIT("updateRateLimit", "bytebin.ratelimit.update.amount"),
         READ_RATE_LIMIT_PERIOD("readRateLimitPeriodMins", "bytebin.ratelimit.read.period"), // minutes
         READ_RATE_LIMIT("readRateLimit", "bytebin.ratelimit.read.amount");
 

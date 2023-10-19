@@ -27,14 +27,10 @@ package me.lucko.bytebin.content;
 
 import com.github.benmanes.caffeine.cache.CacheLoader;
 import com.google.common.collect.ImmutableMap;
-
 import me.lucko.bytebin.content.storage.StorageBackend;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.checkerframework.checker.nullness.qual.NonNull;
-
-import io.prometheus.client.Counter;
 
 import java.util.Collection;
 import java.util.Map;
@@ -46,20 +42,7 @@ import java.util.function.Function;
  * Coordinates the storage of content in a storage backend.
  */
 public class ContentStorageHandler implements CacheLoader<String, Content> {
-
     private static final Logger LOGGER = LogManager.getLogger(ContentStorageHandler.class);
-
-    private static final Counter READ_FROM_BACKEND_COUNTER = Counter.build()
-            .name("bytebin_backend_read_total")
-            .labelNames("backend")
-            .help("Counts the number of cache-misses when loading content")
-            .register();
-
-    private static final Counter WRITE_TO_BACKEND_COUNTER = Counter.build()
-            .name("bytebin_backend_write_total")
-            .labelNames("backend")
-            .help("Counts the number of times content was written to the backend")
-            .register();
 
     /** An index of all stored content */
     private final ContentIndexDatabase index;
@@ -106,7 +89,6 @@ public class ContentStorageHandler implements CacheLoader<String, Content> {
         }
 
         // increment the read counter
-        READ_FROM_BACKEND_COUNTER.labels(backendId).inc();
         LOGGER.info("[STORAGE] Loading '" + key + "' from the '" + backendId + "' backend");
 
         // load the content from the backend
@@ -135,9 +117,6 @@ public class ContentStorageHandler implements CacheLoader<String, Content> {
         // record which backend the content is going to be stored in, and write to the index
         content.setBackendId(backend.getBackendId());
         this.index.put(content);
-
-        // increment the write counter
-        WRITE_TO_BACKEND_COUNTER.labels(backendId).inc();
 
         // save to the backend
         try {
@@ -177,9 +156,6 @@ public class ContentStorageHandler implements CacheLoader<String, Content> {
 
             LOGGER.info("[STORAGE] Deleted '" + key + "' from the '" + backendId + "' backend");
         }
-
-        // update metrics
-        this.index.recordMetrics();
     }
 
     public Executor getExecutor() {

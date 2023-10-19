@@ -26,34 +26,19 @@
 package me.lucko.bytebin;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-
-import me.lucko.bytebin.content.Content;
-import me.lucko.bytebin.content.ContentIndexDatabase;
-import me.lucko.bytebin.content.ContentLoader;
-import me.lucko.bytebin.content.ContentStorageHandler;
-import me.lucko.bytebin.content.StorageBackendSelector;
+import io.jooby.ExecutionMode;
+import io.jooby.Jooby;
+import me.lucko.bytebin.content.*;
 import me.lucko.bytebin.content.storage.AuditTask;
 import me.lucko.bytebin.content.storage.LocalDiskBackend;
-import me.lucko.bytebin.content.storage.S3Backend;
 import me.lucko.bytebin.content.storage.StorageBackend;
 import me.lucko.bytebin.http.BytebinServer;
-import me.lucko.bytebin.util.Configuration;
+import me.lucko.bytebin.util.*;
 import me.lucko.bytebin.util.Configuration.Option;
-import me.lucko.bytebin.util.EnvVars;
-import me.lucko.bytebin.util.ExceptionHandler;
-import me.lucko.bytebin.util.ExpiryHandler;
-import me.lucko.bytebin.util.RateLimitHandler;
-import me.lucko.bytebin.util.RateLimiter;
-import me.lucko.bytebin.util.TokenGenerator;
-
 import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.io.IoBuilder;
-
-import io.jooby.ExecutionMode;
-import io.jooby.Jooby;
-import io.prometheus.client.hotspot.DefaultExports;
 
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -83,6 +68,7 @@ public final class Bytebin implements AutoCloseable {
 
         // setup a new bytebin instance
         Configuration config = Configuration.load(Paths.get("config.json"));
+
         try {
             Bytebin bytebin = new Bytebin(config);
             Runtime.getRuntime().addShutdownHook(new Thread(bytebin::close, "Bytebin Shutdown Thread"));
@@ -105,6 +91,7 @@ public final class Bytebin implements AutoCloseable {
 
         // setup executor
         Thread.setDefaultUncaughtExceptionHandler(ExceptionHandler.INSTANCE);
+
         this.executor = Executors.newScheduledThreadPool(
                 config.getInt(Option.EXECUTOR_POOL_SIZE, 16),
                 new ThreadFactoryBuilder().setNameFormat("bytebin-io-%d").build()
@@ -116,23 +103,7 @@ public final class Bytebin implements AutoCloseable {
         LocalDiskBackend localDiskBackend = new LocalDiskBackend("local", Paths.get("content"));
         storageBackends.add(localDiskBackend);
 
-        StorageBackendSelector backendSelector;
-        if (config.getBoolean(Option.S3, false)) {
-            S3Backend s3Backend = new S3Backend("s3", config.getString(Option.S3_BUCKET, "bytebin"));
-            storageBackends.add(s3Backend);
-
-            backendSelector = new StorageBackendSelector.IfExpiryGt(
-                    config.getInt(Option.S3_EXPIRY_THRESHOLD, 2880), // 2 days
-                    s3Backend,
-                    new StorageBackendSelector.IfSizeGt(
-                            config.getInt(Option.S3_SIZE_THRESHOLD, 100) * Content.KILOBYTE_LENGTH, // 100kb
-                            s3Backend,
-                            new StorageBackendSelector.Static(localDiskBackend)
-                    )
-            );
-        } else {
-            backendSelector = new StorageBackendSelector.Static(localDiskBackend);
-        }
+        StorageBackendSelector backendSelector = new StorageBackendSelector.Static(localDiskBackend);
 
         this.indexDatabase = ContentIndexDatabase.initialise(storageBackends);
 
@@ -149,28 +120,17 @@ public final class Bytebin implements AutoCloseable {
                 config.getLongMap(Option.MAX_CONTENT_LIFETIME_USER_AGENTS)
         );
 
-        boolean metrics = config.getBoolean(Option.METRICS, true);
-        if (metrics) {
-            DefaultExports.initialize();
-        }
-
         // setup the web server
         this.server = (BytebinServer) Jooby.createApp(new String[0], ExecutionMode.EVENT_LOOP, () -> new BytebinServer(
                 storageHandler,
                 contentLoader,
                 config.getString(Option.HOST, "0.0.0.0"),
                 config.getInt(Option.PORT, 8080),
-                metrics,
                 new RateLimitHandler(config.getStringList(Option.API_KEYS)),
                 new RateLimiter(
                         // by default, allow posts at a rate of 30 times every 10 minutes (every 20s)
                         config.getInt(Option.POST_RATE_LIMIT_PERIOD, 10),
                         config.getInt(Option.POST_RATE_LIMIT, 30)
-                ),
-                new RateLimiter(
-                        // by default, allow updates at a rate of 20 times every 2 minutes (every 6s)
-                        config.getInt(Option.UPDATE_RATE_LIMIT_PERIOD, 2),
-                        config.getInt(Option.UPDATE_RATE_LIMIT, 20)
                 ),
                 new RateLimiter(
                         // by default, allow reads at a rate of 30 times every 2 minutes (every 4s)
@@ -179,13 +139,13 @@ public final class Bytebin implements AutoCloseable {
                 ),
                 new TokenGenerator(config.getInt(Option.KEY_LENGTH, 7)),
                 (Content.MEGABYTE_LENGTH * config.getInt(Option.MAX_CONTENT_LENGTH, 10)),
-                expiryHandler,
-                config.getStringMap(Option.HTTP_HOST_ALIASES)
+                expiryHandler
         ));
+
         this.server.start();
 
         // schedule invalidation task
-        if (expiryHandler.hasExpiryTimes() || metrics) {
+        if (expiryHandler.hasExpiryTimes()) {
             this.executor.scheduleWithFixedDelay(storageHandler::runInvalidationAndRecordMetrics, 5, 5, TimeUnit.MINUTES);
         }
 
@@ -198,11 +158,13 @@ public final class Bytebin implements AutoCloseable {
     public void close() {
         this.server.stop();
         this.executor.shutdown();
+
         try {
             this.executor.awaitTermination(30, TimeUnit.SECONDS);
         } catch (InterruptedException e) {
             LOGGER.error("Exception whilst shutting down executor", e);
         }
+
         try {
             this.indexDatabase.close();
         } catch (Exception e) {

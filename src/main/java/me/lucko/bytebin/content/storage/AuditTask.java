@@ -25,16 +25,13 @@
 
 package me.lucko.bytebin.content.storage;
 
-import me.lucko.bytebin.content.Content;
 import me.lucko.bytebin.content.ContentIndexDatabase;
-
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.util.List;
 
 public class AuditTask implements Runnable {
-
     private static final Logger LOGGER = LogManager.getLogger(AuditTask.class);
 
     private final ContentIndexDatabase index;
@@ -48,13 +45,13 @@ public class AuditTask implements Runnable {
     @Override
     public void run() {
         try {
-            run0();
+            execute();
         } catch (Exception e) {
             LOGGER.error("Error occurred while auditing", e);
         }
     }
 
-    private void run0() throws Exception {
+    private void execute() throws Exception {
         LOGGER.info("[AUDIT] Starting audit...");
 
         for (StorageBackend backend : this.backends) {

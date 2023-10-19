@@ -25,45 +25,28 @@
 
 package me.lucko.bytebin.http;
 
-import me.lucko.bytebin.content.Content;
-import me.lucko.bytebin.content.ContentLoader;
-import me.lucko.bytebin.content.ContentStorageHandler;
-import me.lucko.bytebin.util.ContentEncoding;
-import me.lucko.bytebin.util.ExpiryHandler;
-import me.lucko.bytebin.util.Gzip;
-import me.lucko.bytebin.util.RateLimitHandler;
-import me.lucko.bytebin.util.RateLimiter;
-import me.lucko.bytebin.util.TokenGenerator;
-
-import org.apache.logging.log4j.LogManager;
-import org.apache.logging.log4j.Logger;
-
 import io.jooby.Context;
 import io.jooby.MediaType;
 import io.jooby.Route;
 import io.jooby.StatusCode;
 import io.jooby.exception.StatusCodeException;
-import io.prometheus.client.Summary;
-
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
+import me.lucko.bytebin.content.Content;
+import me.lucko.bytebin.content.ContentLoader;
+import me.lucko.bytebin.content.ContentStorageHandler;
+import me.lucko.bytebin.util.*;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 
 import javax.annotation.Nonnull;
+import java.util.Date;
+import java.util.List;
+import java.util.concurrent.CompletableFuture;
 
 public final class PostHandler implements Route.Handler {
 
     /** Logger instance */
     private static final Logger LOGGER = LogManager.getLogger(PostHandler.class);
 
-    public static final Summary CONTENT_SIZE_SUMMARY = Summary.build()
-            .name("bytebin_content_size_bytes")
-            .help("The size of posted content")
-            .labelNames("useragent")
-            .register();
-
-    private final BytebinServer server;
     private final RateLimiter rateLimiter;
     private final RateLimitHandler rateLimitHandler;
 
@@ -73,10 +56,8 @@ public final class PostHandler implements Route.Handler {
     private final TokenGenerator authKeyTokenGenerator;
     private final long maxContentLength;
     private final ExpiryHandler expiryHandler;
-    private final Map<String, String> hostAliases;
 
-    public PostHandler(BytebinServer server, RateLimiter rateLimiter, RateLimitHandler rateLimitHandler, ContentStorageHandler storageHandler, ContentLoader contentLoader, TokenGenerator contentTokenGenerator, long maxContentLength, ExpiryHandler expiryHandler, Map<String, String> hostAliases) {
-        this.server = server;
+    public PostHandler(RateLimiter rateLimiter, RateLimitHandler rateLimitHandler, ContentStorageHandler storageHandler, ContentLoader contentLoader, TokenGenerator contentTokenGenerator, long maxContentLength, ExpiryHandler expiryHandler) {
         this.rateLimiter = rateLimiter;
         this.rateLimitHandler = rateLimitHandler;
         this.storageHandler = storageHandler;
@@ -85,15 +66,15 @@ public final class PostHandler implements Route.Handler {
         this.authKeyTokenGenerator = new TokenGenerator(32);
         this.maxContentLength = maxContentLength;
         this.expiryHandler = expiryHandler;
-        this.hostAliases = hostAliases;
     }
 
+    @Nonnull
     @Override
     public String apply(@Nonnull Context ctx) {
         byte[] content = ctx.body().bytes();
 
         // ensure something was actually posted
-        if (content == null || content.length == 0) {
+        if (content.length == 0) {
             throw new StatusCodeException(StatusCode.BAD_REQUEST, "Missing content");
         }
 
@@ -138,13 +119,8 @@ public final class PostHandler implements Route.Handler {
                 "    ip = " + ipAddress + "\n" +
                 (origin.equals("null") ? "" : "    origin = " + origin + "\n") +
                 "    content size = " + String.format("%,d", content.length / 1024) + " KB\n" +
-                "    encoding = " + encodings.toString() + "\n"
+                "    encoding = " + encodings + "\n"
         );
-
-        // metrics
-        String metricsLabel = BytebinServer.getMetricsLabel(ctx);
-        BytebinServer.recordRequest("POST", metricsLabel);
-        CONTENT_SIZE_SUMMARY.labels(metricsLabel).observe(content.length);
 
         // record the content in the cache
         CompletableFuture<Content> future = new CompletableFuture<>();
@@ -184,7 +160,6 @@ public final class PostHandler implements Route.Handler {
 
         if (ctx.getMethod().equals("PUT")) {
             // PUT: return the URL where the content can be accessed
-            host = this.hostAliases.getOrDefault(host, host);
             String location = "https://" + host + "/" + key;
 
             ctx.setResponseHeader("Location", location);

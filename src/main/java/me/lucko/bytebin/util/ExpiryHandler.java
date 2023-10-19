@@ -77,6 +77,7 @@ public final class ExpiryHandler {
                         )
                 )
         );
+
         if (duration.isZero()) {
             return null;
         }
